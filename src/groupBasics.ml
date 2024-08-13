@@ -4,7 +4,9 @@ module type Group = sig
   type t
   type element
 
+  (** This is a comment I added *)
   val id : element
+
   val generators : element list
   val orbitSize : element -> int
   val orbit : element -> element list
