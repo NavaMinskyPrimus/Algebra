@@ -1,6 +1,6 @@
 (library
  (name test_playground)
- (libraries core)
+ (libraries core project)
  (inline_tests)
  (preprocess
   (pps ppx_jane)))
