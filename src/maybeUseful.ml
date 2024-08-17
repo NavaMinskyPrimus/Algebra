@@ -1,28 +1,4 @@
-open Core
-
-module type Group = sig
-  type t
-  type element
-
-  (** This is a comment I added *)
-  val id : element
-
-  val generators : element list
-  val orbitSize : element -> int
-  val orbit : element -> element list
-  val multiply : element -> element -> element
-end
-
-module type Subgroup = sig
-  include Group
-
-  val superGroup : (module Group)
-
-  (*  val generators : superGroup.element list *)
-  val groupType : (module Group)
-end
-
-let cyclicGroup size =
+(*let cyclicGroup size =
   let module C = struct
     type t = int
     type element = int
@@ -87,4 +63,4 @@ let dihedralGroup size =
   end
   in
   (module C : Group with type t = int and type element = DihedralElement.t)
-;;
+;;*)

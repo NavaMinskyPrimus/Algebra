@@ -1,4 +1,5 @@
 open Core
+open Project
 
 (* Just a very basic file to show how to write tests *)
 let f x =
@@ -10,11 +11,16 @@ let f x =
    printing out data from your program, and capturing it inside that
    same file. *)
 
-let t = Project.FirstTry.CyclicGroup.makeGroup 8
-let x2 = Project.FirstTry.CyclicGroup.makeElement t 2
-let l = Project.FirstTry.CyclicGroup.orbit t x2
+module Example : SecondTry.Group with type element = int = struct
+  type element = int [@@deriving sexp]
+
+  let generators = [ 1 ]
+  let multiply x y = (x + y) % 5
+  let equals x y = x = y
+  let identity = 0
+end
 
 let%expect_test _ =
-  Project.FirstTry.CyclicGroup.printElementList l;
-  [%expect {| 0, 2, 4, 6 |}]
+  print_s [%sexp (SecondTry.orbit (module Example) 2 : Example.element list)];
+  [%expect {| (2 4 1 3 0) |}]
 ;;
