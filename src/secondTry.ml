@@ -47,17 +47,30 @@ let list_contains (type e) (module G : Group with type element = e) l (x : e) =
   | None -> false
 ;;
 
+(*escape scope question for Aba*)
+let all_contained
+  (type e)
+  (module H : Subgroup with type element = e)
+  list1
+  list2
+  c
+  =
+  let rec helper l1 l2 counter =
+    if counter = List.length l2
+    then true
+    else if list_contains (module H) l1 (Helpers.getNth l2 counter)
+    then helper l1 l2 (counter + 1)
+    else false
+  in
+  helper list1 list2 c
+;;
+
 let long_walk (type e) (module H : Subgroup with type element = e) =
   let generators = H.generators in
-  let contains l (x : e) =
-    match List.find l ~f:(fun y -> H.equals y x) with
-    | Some _e -> true
-    | None -> false
-  in
   let rec allContained l1 l2 counter =
     if counter = List.length l2
     then true
-    else if contains l1 (Helpers.getNth l2 counter)
+    else if list_contains (module H) l1 (Helpers.getNth l2 counter)
     then allContained l1 l2 (counter + 1)
     else false
   in
