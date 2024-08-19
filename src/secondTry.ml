@@ -41,10 +41,10 @@ let is_subgroup
   true
 ;;
 
-let is_element (type e) (module H : Subgroup with type element = e) (x : e) =
-  match H.is_element_specific with
-  | Some f -> f x
-  | None -> assert false
+let list_contains (type e) (module G : Group with type element = e) l (x : e) =
+  match List.find l ~f:(fun y -> G.equals y x) with
+  | Some _e -> true
+  | None -> false
 ;;
 
 let long_walk (type e) (module H : Subgroup with type element = e) =
@@ -57,9 +57,9 @@ let long_walk (type e) (module H : Subgroup with type element = e) =
   let rec allContained l1 l2 counter =
     if counter = List.length l2
     then true
-    else if not (contains l1 (Helpers.getNth l2 counter))
-    then false
-    else allContained l1 l2 (counter + 1)
+    else if contains l1 (Helpers.getNth l2 counter)
+    then allContained l1 l2 (counter + 1)
+    else false
   in
   let rec make_next_level l gCounter lCounter =
     if gCounter = List.length generators
@@ -79,6 +79,14 @@ let long_walk (type e) (module H : Subgroup with type element = e) =
     else next_level @ walking (allUnder @ next_level) next_level
   in
   walking generators generators
+;;
+
+let is_element (type e) (module H : Subgroup with type element = e) (x : e) =
+  match H.is_element_specific with
+  | Some f -> f x
+  | None ->
+    let elements_of_H = long_walk (module H) in
+    list_contains (module H) elements_of_H x
 ;;
 
 (*let is_normal
