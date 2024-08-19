@@ -31,17 +31,6 @@ module SubExample : SecondTry.Subgroup with type element = int * int = struct
   let is_element_specific = None
 end
 
-module SubExample : SecondTry.Subgroup with type element = int * int = struct
-  type element = int * int [@@deriving sexp]
-
-  let generators = [ 0, 1; 1, 0 ]
-  let multiply (a, b) (c, d) = (a + c) % 2, (b + d) % 4
-  let equals (a, b) (c, d) = a = c && b = d
-  let identity = 0, 0
-  let known_parents = []
-  let is_element_specific = None
-end
-
 let l = [ 0, 1; 1, 0 ]
 
 let%expect_test _ =

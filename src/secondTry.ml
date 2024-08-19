@@ -84,13 +84,30 @@ let is_element (type e) (module H : Subgroup with type element = e) (x : e) =
     list_contains (module H) elements_of_H x
 ;;
 
-(*let is_normal
-  (type e)
-  (module G : Group with type element = e)
-  (module H : Subgroup with type element = e)
-  =
-  let rec helper counter = if true then 5 else 6 in
-  if is_subgroup (module G) (module H)
-  then 1
-  else raise (Failure "H not a subgroup of G")
-  ;;*)
+let make_subgroup (type e) (module G : Group with type element = e) l =
+  let module C = struct
+    type element = G.element [@@deriving sexp]
+
+    let generators = l
+    let multiply x y = G.multiply x y
+    let equals x y = G.equals x y
+    let identity = G.identity
+    let known_parents = [ (module G : Group with type element = e) ]
+    let is_element_specific = None
+  end
+  in
+  (module C : Subgroup with type element = G.element)
+;;
+
+(*
+   let is_normal
+   (type e)
+   (module G : Group with type element = e)
+   (module H : Subgroup with type element = e)
+   =
+   let rec helper counter = if true then 5 else 6 in
+   if is_subgroup (module G) (module H)
+   then 1
+   else raise (Failure "H not a subgroup of G")
+   ;;
+*)
