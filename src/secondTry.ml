@@ -33,14 +33,6 @@ let orbit (type e) (module G : Group with type element = e) (x : e) =
   helper x 0
 ;;
 
-let is_subgroup
-  (type e)
-  (module G : Group with type element = e)
-  (module H : Subgroup with type element = e)
-  =
-  true
-;;
-
 let list_contains (type e) (module G : Group with type element = e) l (x : e) =
   match List.find l ~f:(fun y -> G.equals y x) with
   | Some _e -> true
@@ -48,13 +40,9 @@ let list_contains (type e) (module G : Group with type element = e) l (x : e) =
 ;;
 
 (*escape scope question for Aba*)
-let all_contained
-  (type e)
-  (module H : Subgroup with type element = e)
-  list1
-  list2
-  c
-  =
+
+(*checks if second list is contained in first list*)
+let all_contained (type e) (module H : Group with type element = e) list1 list2 =
   let rec helper l1 l2 counter =
     if counter = List.length l2
     then true
@@ -62,18 +50,12 @@ let all_contained
     then helper l1 l2 (counter + 1)
     else false
   in
-  helper list1 list2 c
+  helper list1 list2 0
 ;;
 
-let long_walk (type e) (module H : Subgroup with type element = e) =
+(*should be redone as sets, so repeats don't happen*)
+let long_walk (type e) (module H : Group with type element = e) =
   let generators = H.generators in
-  let rec allContained l1 l2 counter =
-    if counter = List.length l2
-    then true
-    else if list_contains (module H) l1 (Helpers.getNth l2 counter)
-    then allContained l1 l2 (counter + 1)
-    else false
-  in
   let rec make_next_level l gCounter lCounter =
     if gCounter = List.length generators
     then
@@ -87,7 +69,7 @@ let long_walk (type e) (module H : Subgroup with type element = e) =
   in
   let rec walking allUnder newLevel =
     let next_level = make_next_level newLevel 0 0 in
-    if allContained allUnder next_level 0
+    if all_contained (module H) allUnder next_level
     then generators
     else next_level @ walking (allUnder @ next_level) next_level
   in
