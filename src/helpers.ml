@@ -6,6 +6,8 @@ let rec getNth mylist index =
   | first :: rest -> if index = 0 then first else getNth rest (index - 1)
 ;;
 
+let failwith msg = raise (Failure msg)
+
 let factors x =
   let rec factorsh x y =
     if x = y

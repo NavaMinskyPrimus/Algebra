@@ -20,7 +20,18 @@ module Example : SecondTry.Group with type element = int = struct
   let identity = 0
 end
 
+module SubExample : SecondTry.Subgroup with type element = int * int = struct
+  type element = int * int [@@deriving sexp]
+
+  let generators = [ 0, 1; 1, 0 ]
+  let multiply (a, b) (c, d) = a + (c % 2), b + (d % 4)
+  let equals (a, b) (c, d) = a = c && b = d
+  let identity = 0, 0
+  let known_parents = []
+  let is_element_specific = None
+end
+
 let%expect_test _ =
-  print_s [%sexp (SecondTry.orbit (module Example) 2 : Example.element list)];
-  [%expect {| (2 4 1 3 0) |}]
+  print_s [%sexp (SecondTry.long_walk (module SubExample) : (int * int) list)];
+  [%expect {| (2) |}]
 ;;
