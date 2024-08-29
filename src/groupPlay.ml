@@ -127,11 +127,7 @@ let add_parent
 (*Ask Aba about whether it's cool you didn't take e*)
 let is_cyclic (module G : Group) = List.length G.generators = 1
 
-(*this is a problem. I can't check 'is this group a subgroup?'
-  There's one clear solution, which is to collapse subgroup into
-  group by using options, but i don't want to have to. This also
-  implies it will be somewhat difficult to differntiate
-  cyclic/dihedral groups*)
+(* Need help!!*)
 let group_equals
   (type e)
   (module H : Group with type element = e)
@@ -171,21 +167,26 @@ let is_subgroup
 ;;
 
 let direct_product
-  (type e)
-  (module H : Group with type element = e)
-  (module G : Group with type element = e)
+  (type e1 e2)
+  (module H : Group with type element = e1)
+  (module G : Group with type element = e2)
   =
-  let rec cross_by_one l x counter =
+  let rec cross_by_one_left l x counter =
     if List.length l = counter
     then []
-    else (List.nth_exn l counter, x) :: cross_by_one l x (counter + 1)
+    else (List.nth_exn l counter, x) :: cross_by_one_left l x (counter + 1)
+  in
+  let rec cross_by_one_right l x counter =
+    if List.length l = counter
+    then []
+    else (x, List.nth_exn l counter) :: cross_by_one_right l x (counter + 1)
   in
   let module C = struct
     type element = H.element * G.element [@@deriving sexp]
 
     let generators =
-      cross_by_one H.generators G.identity 0
-      @ cross_by_one G.generators H.identity 0
+      cross_by_one_left H.generators G.identity 0
+      @ cross_by_one_right G.generators H.identity 0
     ;;
 
     let multiply (a, b) (x, y) = H.multiply a x, G.multiply b y
@@ -195,5 +196,39 @@ let direct_product
     let is_element_specific = None
   end
   in
-  (module C : Group with type element = e * e)
+  (module C : Group with type element = e1 * e2)
+;;
+
+let semidirect_product
+  (type e1 e2)
+  (module N : Group with type element = e1)
+  (module G : Group with type element = e2)
+  (f : e2 -> e1 -> e1)
+  =
+  let rec cross_by_one_left l x counter =
+    if List.length l = counter
+    then []
+    else (List.nth_exn l counter, x) :: cross_by_one_left l x (counter + 1)
+  in
+  let rec cross_by_one_right l x counter =
+    if List.length l = counter
+    then []
+    else (x, List.nth_exn l counter) :: cross_by_one_right l x (counter + 1)
+  in
+  let module C = struct
+    type element = N.element * G.element [@@deriving sexp]
+
+    let generators =
+      cross_by_one_left N.generators G.identity 0
+      @ cross_by_one_right G.generators N.identity 0
+    ;;
+
+    let multiply (a, x) (b, y) = N.multiply a (f x b), G.multiply x y
+    let equals (a, x) (b, y) = N.equals a b && G.equals x y
+    let identity = N.identity, G.identity
+    let known_parents = []
+    let is_element_specific = None
+  end
+  in
+  (module C : Group with type element = e1 * e2)
 ;;
