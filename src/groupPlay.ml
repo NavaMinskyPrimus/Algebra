@@ -1,0 +1,192 @@
+open! Core
+open! GroupTypeHolder
+open! Type_equal
+
+module type Group = GroupTypes.Group
+
+module type Subgroup = sig
+  include Group
+
+  val known_parents : (module Group with type element = element) list
+  val is_element_specific : (element -> bool) option
+end
+
+(*takes a group and an element and returns the size of that element's orbit in that group. *)
+let orbitSize (type e) (module G : Group with type element = e) (x : e) =
+  let rec helper at count =
+    if G.equals at G.identity
+    then count + 1
+    else helper (G.multiply x at) (count + 1)
+  in
+  helper x 0
+;;
+
+(*takes a group and an element and returns the element's orbit in that group. *)
+
+let orbit (type e) (module G : Group with type element = e) (x : e) =
+  let orbitS = orbitSize (module G) x in
+  let rec helper at count =
+    if count = orbitS then [] else at :: helper (G.multiply at x) (count + 1)
+  in
+  helper x 0
+;;
+
+(*This takes a group, a list of its elements and another element. it checks if that element is in the list*)
+let list_contains (type e) (module G : Group with type element = e) l (x : e) =
+  match List.find ~f:(fun y -> G.equals y x) l with
+  | Some _e -> true
+  | None -> false
+;;
+
+(*escape scope question for Aba*)
+
+(*checks if second list is contained in first list*)
+let all_contained (type e) (module H : Group with type element = e) list1 list2 =
+  let rec helper l1 l2 counter =
+    if counter = List.length l2
+    then true
+    else if list_contains (module H) l1 (List.nth_exn l2 counter)
+    then helper l1 l2 (counter + 1)
+    else false
+  in
+  helper list1 list2 0
+;;
+
+(*should be redone as sets, so repeats don't happen*)
+(*takes a group and returns all it's elements, though the list is quite repetative*)
+let long_walk (type e) (module H : Group with type element = e) =
+  let generators = H.generators in
+  let rec make_next_level l gCounter lCounter =
+    if gCounter = List.length generators
+    then
+      if lCounter = List.length l then [] else make_next_level l 0 (lCounter + 1)
+    else if lCounter = List.length l
+    then []
+    else (
+      let generator = List.nth_exn generators gCounter in
+      let thisL = List.nth_exn l lCounter in
+      H.multiply thisL generator :: make_next_level l (gCounter + 1) lCounter)
+  in
+  let rec walking allUnder newLevel =
+    let next_level = make_next_level newLevel 0 0 in
+    if all_contained (module H) allUnder next_level
+    then generators
+    else next_level @ walking (allUnder @ next_level) next_level
+  in
+  walking generators generators
+;;
+
+(*checks if an element of a group is also contained in a subgroup*)
+let is_element (type e) (module H : Group with type element = e) (x : e) =
+  match H.is_element_specific with
+  | Some f -> f x
+  | None ->
+    let elements_of_H = long_walk (module H) in
+    list_contains (module H) elements_of_H x
+;;
+
+(*constructs a subgroup from a list of generators and it's parent group*)
+let make_subgroup (type e) (module G : Group with type element = e) l =
+  let module C = struct
+    type element = G.element [@@deriving sexp]
+
+    let generators = l
+    let multiply x y = G.multiply x y
+    let equals x y = G.equals x y
+    let identity = G.identity
+    let known_parents = [ (module G : Group with type element = e) ]
+    let is_element_specific = None
+  end
+  in
+  (module C : Group with type element = G.element)
+;;
+
+let add_parent
+  (type e)
+  (module G : Group with type element = e)
+  (module H : Group with type element = e)
+  =
+  let module C = struct
+    type element = H.element [@@deriving sexp]
+
+    let generators = H.generators
+    let multiply x y = H.multiply x y
+    let equals x y = H.equals x y
+    let identity = H.identity
+
+    let known_parents =
+      (module G : Group with type element = e) :: H.known_parents
+    ;;
+
+    let is_element_specific = H.is_element_specific
+  end
+  in
+  (module C : Group with type element = G.element)
+;;
+
+(*Ask Aba about whether it's cool you didn't take e*)
+let is_cyclic (module G : Group) = List.length G.generators = 1
+
+(*this is a problem. I can't check 'is this group a subgroup?'
+  There's one clear solution, which is to collapse subgroup into
+  group by using options, but i don't want to have to. This also
+  implies it will be somewhat difficult to differntiate
+  cyclic/dihedral groups*)
+let is_subgroup
+  (type e)
+  (module G : Group with type element = e)
+  (module H : Group with type element = e)
+  =
+  let rec next_level (l : (module Group with type element = e) list) counter =
+    if List.length l = counter
+    then []
+    else
+      let module Holder = (val List.nth_exn l counter) in
+      Holder.known_parents @ next_level l (counter + 1)
+  in
+  let rec list_tree (l : (module Group with type element = e) list) =
+    if List.length l = 0
+    then []
+    else next_level l 0 @ list_tree (next_level l 0)
+  in
+  let superGroups =
+    (module H : Group with type element = e) :: list_tree [ (module H) ]
+  in
+  true
+;;
+
+let cross_product
+  (type e)
+  (module H : Group with type element = e)
+  (module G : Group with type element = e)
+  =
+  let rec cross_by_one l x counter =
+    if List.length l = counter
+    then []
+    else (List.nth_exn l counter, x) :: cross_by_one l x (counter + 1)
+  in
+  let module C = struct
+    type element = H.element * G.element [@@deriving sexp]
+
+    let generators =
+      cross_by_one H.generators G.identity 0
+      @ cross_by_one G.generators H.identity 0
+    ;;
+
+    let multiply (a, b) (x, y) = H.multiply a x, G.multiply b y
+    let equals (a, b) (x, y) = H.equals a x && G.equals b y
+    let identity = H.identity, G.identity
+    let known_parents = []
+    let is_element_specific = None
+  end
+  in
+  (module C : Group with type element = e * e)
+;;
+
+let equals
+  (type e)
+  (module H : Group with type element = e)
+  (module G : Group with type element = e)
+  =
+  true
+;;
