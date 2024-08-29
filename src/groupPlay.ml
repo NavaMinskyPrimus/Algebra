@@ -132,6 +132,14 @@ let is_cyclic (module G : Group) = List.length G.generators = 1
   group by using options, but i don't want to have to. This also
   implies it will be somewhat difficult to differntiate
   cyclic/dihedral groups*)
+let group_equals
+  (type e)
+  (module H : Group with type element = e)
+  (module G : Group with type element = e)
+  =
+  true
+;;
+
 let is_subgroup
   (type e)
   (module G : Group with type element = e)
@@ -152,10 +160,17 @@ let is_subgroup
   let superGroups =
     (module H : Group with type element = e) :: list_tree [ (module H) ]
   in
-  true
+  let rec is_contained (l : (module Group with type element = e) list) n =
+    if n = List.length l
+    then false
+    else if group_equals (module G) (List.nth_exn l n)
+    then true
+    else is_contained l (n + 1)
+  in
+  is_contained superGroups 0
 ;;
 
-let cross_product
+let direct_product
   (type e)
   (module H : Group with type element = e)
   (module G : Group with type element = e)
@@ -181,12 +196,4 @@ let cross_product
   end
   in
   (module C : Group with type element = e * e)
-;;
-
-let equals
-  (type e)
-  (module H : Group with type element = e)
-  (module G : Group with type element = e)
-  =
-  true
 ;;
