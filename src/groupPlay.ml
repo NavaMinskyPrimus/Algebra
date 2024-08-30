@@ -32,7 +32,12 @@ let orbit (type e) (module G : Group with type element = e) (x : e) =
 ;;
 
 (*This takes a group, a list of its elements and another element. it checks if that element is in the list*)
-let list_contains (type e) (module G : Group with type element = e) l (x : e) =
+let element_list_contains
+  (type e)
+  (module G : Group with type element = e)
+  l
+  (x : e)
+  =
   match List.find ~f:(fun y -> G.equals y x) l with
   | Some _e -> true
   | None -> false
@@ -45,7 +50,7 @@ let all_contained (type e) (module H : Group with type element = e) list1 list2 
   let rec helper l1 l2 counter =
     if counter = List.length l2
     then true
-    else if list_contains (module H) l1 (List.nth_exn l2 counter)
+    else if element_list_contains (module H) l1 (List.nth_exn l2 counter)
     then helper l1 l2 (counter + 1)
     else false
   in
@@ -82,7 +87,7 @@ let is_element (type e) (module H : Group with type element = e) (x : e) =
   | Some f -> f x
   | None ->
     let elements_of_H = long_walk (module H) in
-    list_contains (module H) elements_of_H x
+    element_list_contains (module H) elements_of_H x
 ;;
 
 (*constructs a subgroup from a list of generators and it's parent group*)
