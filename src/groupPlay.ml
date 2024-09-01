@@ -99,8 +99,10 @@ let make_subgroup (type e) (module G : Group with type element = e) l =
     let multiply x y = G.multiply x y
     let equals x y = G.equals x y
     let identity = G.identity
+    let inverse x = G.inverse x
     let known_parents = [ (module G : Group with type element = e) ]
     let is_element_specific = None
+    let groupID = GroupId.create()
   end
   in
   (module C : Group with type element = G.element)
@@ -118,6 +120,8 @@ let add_parent
     let multiply x y = H.multiply x y
     let equals x y = H.equals x y
     let identity = H.identity
+    let inverse x = H.inverse x
+    let groupID = GroupId.create()
 
     let known_parents =
       (module G : Group with type element = e) :: H.known_parents
@@ -129,18 +133,20 @@ let add_parent
   (module C : Group with type element = G.element)
 ;;
 
-(*Ask Aba about whether it's cool you didn't take e*)
+(*takes a group and returns whether it is cyclic*)
 let is_cyclic (module G : Group) = List.length G.generators = 1
 
 (* Need help!!*)
 let group_equals
-  (type e)
-  (module H : Group with type element = e)
-  (module G : Group with type element = e)
+  (module H : Group)
+  (module G : Group)
   =
-  true
+  GroupId.equal H.groupID G.groupID
 ;;
 
+(*I would love this to be able to take two groups with different element
+  types and compare the element types to rule out subgrouping, but I don't know how*)
+(*Checks if H is a subgroup of G*)
 let is_subgroup
   (type e)
   (module G : Group with type element = e)
@@ -164,7 +170,7 @@ let is_subgroup
   let rec is_contained (l : (module Group with type element = e) list) n =
     if n = List.length l
     then false
-    else if group_equals (module G) (List.nth_exn l n)
+    else if group_equals (module G) (module (val (List.nth_exn l n)))
     then true
     else is_contained l (n + 1)
   in
@@ -197,6 +203,8 @@ let direct_product
     let multiply (a, b) (x, y) = H.multiply a x, G.multiply b y
     let equals (a, b) (x, y) = H.equals a x && G.equals b y
     let identity = H.identity, G.identity
+    let inverse (a, b) = H.inverse a, G.inverse b
+    let groupID = GroupId.create()
     let known_parents = []
     let is_element_specific = None
   end
@@ -204,6 +212,7 @@ let direct_product
   (module C : Group with type element = e1 * e2)
 ;;
 
+(* this is incomplete; I do not have an inverse function yet. *)
 let semidirect_product
   (type e1 e2)
   (module N : Group with type element = e1)
@@ -231,9 +240,42 @@ let semidirect_product
     let multiply (a, x) (b, y) = N.multiply a (f x b), G.multiply x y
     let equals (a, x) (b, y) = N.equals a b && G.equals x y
     let identity = N.identity, G.identity
+    let inverse x = x
     let known_parents = []
     let is_element_specific = None
+    let groupID = GroupId.create()
   end
   in
   (module C : Group with type element = e1 * e2)
+;;
+
+(*Checks if N is normal in G*)
+let is_normal
+  (type e)
+  (module N : Group with type element = e)
+  (module G : Group with type element = e)
+  =
+  (* checks if l's conjugates by g are in N *)
+  let rec conjugate_contained (l : e list) (g : e) counter =
+    if List.length l = counter
+    then true
+    else (
+      let x =
+        G.multiply (G.multiply g (List.nth_exn l counter)) (G.inverse g)
+      in
+      if is_element (module N) x
+      then conjugate_contained l g (counter + 1)
+      else false)
+  in
+  (*checks if the first list's conjugates by the second are in N*)
+  let rec conjugates_contained (l1 : e list) (l2 : e list) counter =
+    if counter = List.length l2
+    then true
+    else if conjugate_contained l1 (List.nth_exn l2 counter) 0
+    then conjugates_contained l1 l2 (counter + 1)
+    else false
+  in
+  if not (is_subgroup (module N) (module G))
+  then false
+  else conjugates_contained N.generators G.generators 0
 ;;
