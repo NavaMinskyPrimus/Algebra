@@ -43,8 +43,6 @@ let element_list_contains
   | None -> false
 ;;
 
-(*escape scope question for Aba*)
-
 (*checks if second list is contained in first list*)
 let all_contained (type e) (module H : Group with type element = e) list1 list2 =
   let rec helper l1 l2 counter =
@@ -102,12 +100,13 @@ let make_subgroup (type e) (module G : Group with type element = e) l =
     let inverse x = G.inverse x
     let known_parents = [ (module G : Group with type element = e) ]
     let is_element_specific = None
-    let groupID = GroupId.create()
+    let groupID = GroupId.create ()
   end
   in
   (module C : Group with type element = G.element)
 ;;
 
+(*Adds G as a parent to H*)
 let add_parent
   (type e)
   (module G : Group with type element = e)
@@ -121,7 +120,7 @@ let add_parent
     let equals x y = H.equals x y
     let identity = H.identity
     let inverse x = H.inverse x
-    let groupID = GroupId.create()
+    let groupID = H.groupID
 
     let known_parents =
       (module G : Group with type element = e) :: H.known_parents
@@ -134,13 +133,11 @@ let add_parent
 ;;
 
 (*takes a group and returns whether it is cyclic*)
+(*only works if the set of generators is minimal*)
 let is_cyclic (module G : Group) = List.length G.generators = 1
 
 (* Need help!!*)
-let group_equals
-  (module H : Group)
-  (module G : Group)
-  =
+let group_equals (module H : Group) (module G : Group) =
   GroupId.equal H.groupID G.groupID
 ;;
 
@@ -170,7 +167,7 @@ let is_subgroup
   let rec is_contained (l : (module Group with type element = e) list) n =
     if n = List.length l
     then false
-    else if group_equals (module G) (module (val (List.nth_exn l n)))
+    else if group_equals (module G) (module (val List.nth_exn l n))
     then true
     else is_contained l (n + 1)
   in
@@ -204,7 +201,7 @@ let direct_product
     let equals (a, b) (x, y) = H.equals a x && G.equals b y
     let identity = H.identity, G.identity
     let inverse (a, b) = H.inverse a, G.inverse b
-    let groupID = GroupId.create()
+    let groupID = GroupId.create ()
     let known_parents = []
     let is_element_specific = None
   end
@@ -232,6 +229,7 @@ let semidirect_product
   let module C = struct
     type element = N.element * G.element [@@deriving sexp]
 
+    (*note these generators are no longer minimal. We should see if we can find a way to make this better*)
     let generators =
       cross_by_one_left N.generators G.identity 0
       @ cross_by_one_right G.generators N.identity 0
@@ -243,7 +241,7 @@ let semidirect_product
     let inverse x = x
     let known_parents = []
     let is_element_specific = None
-    let groupID = GroupId.create()
+    let groupID = GroupId.create ()
   end
   in
   (module C : Group with type element = e1 * e2)
@@ -252,8 +250,8 @@ let semidirect_product
 (*Checks if N is normal in G*)
 let is_normal
   (type e)
-  (module N : Group with type element = e)
   (module G : Group with type element = e)
+  (module N : Group with type element = e)
   =
   (* checks if l's conjugates by g are in N *)
   let rec conjugate_contained (l : e list) (g : e) counter =
@@ -271,11 +269,13 @@ let is_normal
   let rec conjugates_contained (l1 : e list) (l2 : e list) counter =
     if counter = List.length l2
     then true
-    else if conjugate_contained l1 (List.nth_exn l2 counter) 0
+    else if conjugate_contained l1 (List.nth_exn l2 counter) counter
     then conjugates_contained l1 l2 (counter + 1)
-    else false
+    else (
+      printf "%d" counter;
+      false)
   in
-  if not (is_subgroup (module N) (module G))
+  if not (is_subgroup (module G) (module N))
   then false
   else conjugates_contained N.generators G.generators 0
 ;;
