@@ -27,11 +27,11 @@ module DihedralExample : Group with type element = int * int = struct
   type element = int * int [@@deriving sexp]
 
   let generators = [ 1, 0; 0, 1 ]
-  let multiply (a, b) (x, y) = (a + x) % 8, (b + y) % 2
+  let multiply (n, i) (m, j) = (n - m) % 8, (i + j) % 2
   let equals (a, b) (x, y) = a = x && b = y
   let identity = 0, 0
   let known_parents = []
-  let inverse (x, y) = 8 - x, 2 - y
+  let inverse (x, y) = if y = 1 then x, y else 8 - x, y
   let is_element_specific = None
   let groupID = GroupId.create ()
 end
@@ -45,6 +45,8 @@ let%expect_test _ =
   let sexp_of_list =
     [%sexp_of: (int * int) list] (orbit (module Holder) (0, 1))
   in
+  print_endline (Sexplib.Sexp.to_string_hum sexp_of_list);
+  let sexp_of_list = [%sexp_of: int * int] (Holder.inverse (0, 1)) in
   print_endline (Sexplib.Sexp.to_string_hum sexp_of_list);
   printf "%b" (is_normal (module DihedralExample) (module Holder))
 ;;

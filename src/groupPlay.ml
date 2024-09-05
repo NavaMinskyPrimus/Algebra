@@ -262,7 +262,9 @@ let is_normal
         G.multiply (G.multiply g (List.nth_exn l counter)) (G.inverse g)
       in
       if is_element (module N) x
-      then conjugate_contained l g (counter + 1)
+      then (
+        printf "%d\n" counter;
+        conjugate_contained l g (counter + 1))
       else false)
   in
   (*checks if the first list's conjugates by the second are in N*)
@@ -271,11 +273,66 @@ let is_normal
     then true
     else if conjugate_contained l1 (List.nth_exn l2 counter) counter
     then conjugates_contained l1 l2 (counter + 1)
-    else (
-      printf "%d" counter;
-      false)
+    else false
   in
   if not (is_subgroup (module G) (module N))
   then false
   else conjugates_contained N.generators G.generators 0
 ;;
+
+let create_dihedral n =
+  let module C = struct
+    type element = int * int [@@deriving sexp]
+
+    let generators = [ 1, 0; 0, 1 ]
+    let multiply (k, i) (m, j) = (k - m) % n, (i + j) % 2
+    let equals (a, b) (x, y) = a = x && b = y
+    let identity = 0, 0
+    let known_parents = []
+    let inverse (x, y) = if y = 1 then x, y else n - x, y
+    let is_element_specific = None
+    let groupID = GroupId.create ()
+  end
+  in
+  (module C : Group with type element = int * int)
+;;
+
+let create_cyclic n =
+  let module C = struct
+    type element = int [@@deriving sexp]
+
+    let generators = [ 1 ]
+    let multiply x y = x + (y % n)
+    let equals x y = x = y
+    let identity = 0
+    let known_parents = []
+    let inverse x = n - x
+    let is_element_specific = None
+    let groupID = GroupId.create ()
+  end
+  in
+  (module C : Group with type element = int)
+;;
+
+let rec create_list n counter =
+  if n = counter then [ counter ] else counter :: create_list n (counter + 1)
+;;
+
+(*
+   let create_symetric n =
+   let module C = struct
+   type element = int list [@@deriving sexp]
+
+   let generators = [ [ 1; 2 ]; create_list n 1 ]
+   let multiply x y = x
+   let equals x y = true
+   let identity = [ 1 ]
+   let known_parents = []
+   let inverse x = x
+   let is_element_specific = None
+   let groupID = GroupId.create ()
+   end
+   in
+   (module C : Group with type element = int list)
+   ;;
+*)
